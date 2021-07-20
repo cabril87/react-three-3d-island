@@ -1,29 +1,25 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef } from 'react'
 
-
-
-const keys = { KeyW: "forward", KeyS: "backward", KeyA: "left", KeyD: "right", Space: "jump" }
-const moveFieldByKey = (key) => keys[key]
-
-
-const usePlayerControls = () => {
-  const [movement, setMovement] = useState({ forward: false, backward: false, left: false, right: false, jump: false })
+export function useKeyPress(target, event) {
   useEffect(() => {
-    const handleKeyDown = (e) => setMovement((m) => ({ ...m, [moveFieldByKey(e.code)]: true }))
-    const handleKeyUp = (e) => setMovement((m) => ({ ...m, [moveFieldByKey(e.code)]: false }))
-    // const handleKeyRight = (e) => setMovement((m) => ({ ...m, [moveFieldByKey(e.code)]: false }))
-    // const handleKeyLeft = (e) => setMovement((m) => ({ ...m, [moveFieldByKey(e.code)]: false }))
-    document.addEventListener("keydown", handleKeyDown)
-    document.addEventListener("keyup", handleKeyUp)
-    // document.addEventListener("keyright", handleKeyRight)
-    // document.addEventListener("keyleft", handleKeyLeft)
+    const downHandler = ({ key }) => target.indexOf(key) !== -1 && event(true)
+    const upHandler = ({ key }) => target.indexOf(key) !== -1 && event(false)
+    window.addEventListener('keydown', downHandler)
+    window.addEventListener('keyup', upHandler)
     return () => {
-      document.removeEventListener("keydown", handleKeyDown)
-      document.removeEventListener("keyup", handleKeyUp)
-      // document.removeEventListener("keyright", handleKeyRight)
-      // document.removeEventListener("keyleft", handleKeyLeft)
+      window.removeEventListener('keydown', downHandler)
+      window.removeEventListener('keyup', upHandler)
     }
   }, [])
-  return movement
 }
-export default usePlayerControls
+
+export function useControls() {
+  const keys = useRef({ forward: false, backward: false, left: false, right: false, brake: false, space: false })
+  useKeyPress(['ArrowUp', 'w'], (pressed) => (keys.current.forward = pressed))
+  useKeyPress(['ArrowDown', 's'], (pressed) => (keys.current.backward = pressed))
+  useKeyPress(['ArrowLeft', 'a'], (pressed) => (keys.current.left = pressed))
+  useKeyPress(['ArrowRight', 'd'], (pressed) => (keys.current.right = pressed))
+  useKeyPress([' '], (pressed) => (keys.current.brake = pressed))
+  useKeyPress(['q'], (pressed) => (keys.current.space= pressed))
+  return keys
+}

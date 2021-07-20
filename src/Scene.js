@@ -10,28 +10,23 @@ import React, { useEffect, useLayoutEffect, useRef } from 'react'
 import { useGLTF, useAnimations } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { useSphere} from "@react-three/cannon"
-import usePlayerControls from './Player'
+import { useSphere } from "@react-three/cannon"
+import { useControls } from './Player'
 
-
-const SPEED = 5
 const direction = new THREE.Vector3()
 const frontVector = new THREE.Vector3()
-
-
 const sideVector = new THREE.Vector3()
-
 const rotation = new THREE.Vector3()
 const speed = new THREE.Vector3()
 
 export default function Model(props) {
   const group = useRef()
+  const controls = useControls()
   const { nodes, materials, animations } = useGLTF('/scene.gltf')
-  const [ref, api] = useSphere(() => ({ mass: 0, type: "Dynamic", position: [0, 0, 0], ...props }))
+  const [ref, api] = useSphere(() => ({ mass: 0, type: "Dynamic", position: [0, 100, 100], ...props }))
   const { actions } = useAnimations(animations, ref)
-  const { forward, backward, left, right, jump } = usePlayerControls()
-  const { scene} = useThree()
-  
+  const { scene } = useThree()
+
   const velocity = useRef([0, 0, 0])
   useEffect(() => api.velocity.subscribe((v) => (velocity.current = v)), [])
 
@@ -39,49 +34,98 @@ export default function Model(props) {
     actions.Scene.play()
   }, [])
 
-  useFrame(({clock}) => {
+  let SPEED = 55
+
+  useFrame(({ camera, clock }, state) => {
+ 
+  const moveDistance = 0.3
+  const rotateSpeed = 0.1
+  const { forward, backward, left, right, space, reset } = controls.current
+  
+  const moveLeft = () => {
+    if (left) {
+      group.current.rotation.z += rotateSpeed
+      camera.rotateZ = group.current.rotateZ
+    }
     
-    // api.position.set(0, 0, 0)
-    sideVector.set(Number(left)  - Number(right), 0, 0)
-    frontVector.set(0, 0, Number(backward) - Number(forward) )
+  }
+  
+  const moveRight = () => {
+    if (right) {
+      group.current.rotation.z -= rotateSpeed
+    }
+  }
+  
+  const moveForward = () => {
+    if (forward) {
+      
+      group.current.translateX(moveDistance * 2)
+    }
+  }
+  const moveBackward = () => {
+    if (backward) {
+      group.current.translateX(-moveDistance * 2)
+    }
+  }
+  
+  let leftIt = moveLeft()
+  let rightIt = moveRight()
+  let forwardIt = moveForward()
+  let backwardIt = moveBackward()
+  
+  frontVector.set(0, 0, backwardIt - forwardIt)
+  sideVector.set(leftIt - rightIt, 0, 0)
+  direction.subVectors(frontVector, sideVector).normalize().multiplyScalar(SPEED).applyEuler(camera.rotation)
+  speed.fromArray(velocity.current)
+  
+  // group.current.children[0].rotation.x = THREE.MathUtils.lerp(
+    //   group.current.children[0].rotation.x,
+    //   Math.sin((speed.length() > 1) * clock.elaspedTime * 10) / 6,
+    //   0.1,
+    // )
+    // console.log(clock)
     
-    direction.subVectors(frontVector, sideVector).normalize().multiplyScalar(SPEED).applyEuler(scene.rotation)
-    // direction.applyAxisAngle(sideVector, frontVector)
-    speed.fromArray(velocity.current)
     
-    ref.current.rotation.copy(scene.rotation)
-    ref.current.position.copy(scene.position).add(scene.getWorldDirection(rotation).multiplyScalar(1))
     api.velocity.set(direction.x, velocity.current[1], direction.z)
+
+
+
+
+
+
+    // if (jump && Math.abs(velocity.current[1].toFixed(2)) < 0.05) api.velocity.set(velocity.current[0], 10, velocity.current[2])
+
+
   })
 
   return (
     <>
-    
-    <mesh ref={group} />
-    <group ref={ref} {...props} dispose={null} >
-      <group position={[0,2,0]} rotation={[1.57, 0, -Math.PI / 2]} scale={[1, 1, 1]}>
-        <group rotation={[-Math.PI, 0, -Math.PI /2]}>
-          <group position={[0, 0,0 ]} rotation={[0, 0, -Math.PI / 2]} scale={0.2}>
-            <primitive object={nodes._rootJoint} />
-            <skinnedMesh
-              geometry={nodes.Object_9.geometry}
-              material={materials.airship}
-              skeleton={nodes.Object_9.skeleton}
-            />
-            <skinnedMesh
-              geometry={nodes.Object_10.geometry}
-              material={nodes.Object_10.material}
-              skeleton={nodes.Object_10.skeleton}
-            />
-            <skinnedMesh
-              geometry={nodes.Object_11.geometry}
-              material={nodes.Object_11.material}
-              skeleton={nodes.Object_11.skeleton}
-            />
+
+      <mesh ref={ref} />
+      <group {...props} dispose={null} >
+        <group position={[0, 2, 0]} rotation={[1.57, 0, -Math.PI / 2]} scale={[1, 1, 1]}>
+          <group rotation={[-Math.PI, 0, -Math.PI / 2]}>
+            <group ref={group} position={[0, 0, 0]} rotation={[0, 0, -Math.PI / 2]} scale={0.2}>
+              <primitive object={nodes._rootJoint} />
+              <skinnedMesh
+                geometry={nodes.Object_9.geometry}
+                material={materials.airship}
+                skeleton={nodes.Object_9.skeleton}
+              />
+              <skinnedMesh
+                geometry={nodes.Object_10.geometry}
+                material={nodes.Object_10.material}
+                skeleton={nodes.Object_10.skeleton}
+              />
+              <skinnedMesh
+                geometry={nodes.Object_11.geometry}
+                material={nodes.Object_11.material}
+                skeleton={nodes.Object_11.skeleton}
+              />
+            </group>
           </group>
         </group>
       </group>
-    </group>
     </>
   )
 }

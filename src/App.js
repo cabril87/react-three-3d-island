@@ -13,7 +13,7 @@ import Model from './Scene';
 function App() {
   return (
     <>
-      <Canvas camera={{ position: [0, 50, 50], near: 1, far: 100000 }}>
+      <Canvas camera={{ position: [0, 50, 150], near: 1, far: 100000 }}>
         <gridHelper args={[100, 100, `white`, `gray`]} divisions={10} />
         <OrbitControls />
         <ambientLight />
